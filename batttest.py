@@ -8,11 +8,8 @@ bt.connectBattery()
 #bt.disconnectBattery()
 #time.sleep(1)
 bt.chargeMode()
-print bt.readVoltage()
-print bt.readVoltage()
-print bt.readVoltage()
-print bt.readVoltage()
-print bt.readVoltage()
+while True:
+    print bt.readVoltage()
 #
 time.sleep(1)
 bt.dischargeMode()

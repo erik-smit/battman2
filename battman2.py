@@ -52,22 +52,52 @@ class Battman2(object):
         self.p.setData(self.data)
 
     def readVoltage(self):
-	count = 0
-        lo = 0
-        hi = 0
         maxCount = 1<<12
+        
+        count = 0
+        lo = None
+        hi = None
+
         self.pulse(DA_RESET)
         time.sleep(0.01)
-        while (count<4095):
-            self.pulse(DA_INCREMENT)
-#            time.sleep(0.0001)
-            if self.p.getInSelected(): #
-		lo = self.bitsToVolt(count)
-            if self.p.getInError(): #
-		hi = self.bitsToVolt(count)
-            count += 1
-        return hi - lo
 
+        while (count<4096 and (lo is None or hi is None)):
+            self.pulse(DA_INCREMENT)
+
+            # The status pins have inverted signal.
+            if (lo is None and not self.p.getInSelected()):  
+                lo = count
+            if (hi is None and not self.p.getInError()): 
+                hi = count
+
+            count += 1
+
+        if not lo is None:
+            lo = self.verifyCount(lo, self.p.getInSelected)
+        else:
+            lo = count
+
+        if not hi is None:
+            hi = self.verifyCount(hi, self.p.getInError)
+        else:
+            hi = count
+        return self.bitsToVolt(hi - lo)
+		
+    # The counter loops 'overshoots' due to PC being way faster than the logic in battman2.
+    # Instead of delaying every interation of the loop, first overshoot and then count backwards.
+    def verifyCount(self, count, func):
+        if (count == 0):
+            return 0
+        while(not func()):
+            self.pulse(DA_RESET)
+            time.sleep(0.01)
+            for foo in range(0, count):
+                self.pulse(DA_INCREMENT)
+            time.sleep(0.05)
+            count -= 1
+        count += 1
+        return count
+		
     def bitsToVolt(self, bits):
         count = 0
         result = 0
@@ -80,17 +110,4 @@ class Battman2(object):
     def clean(self):
         self.data = 0
         self.p.setData(self.data)
-
-    def count(self):
-        while (count<8):
-            self.data = 1<<count
-            self.p.setData(self.data)
-            time.sleep(1)
-            print(self.data)
-            #self.data = 0x0
-            count += 1
-        self.p.setData(0)
-
-
-
 
